@@ -115,6 +115,22 @@ vivado 側での設定になるが、2018.3辺りまでのDiglintのボード設
 そちらを確認.
 (ただしこのままだとMACアドレスは手動で書き換える必要あり)
 
+## telnetd, ftpd の無効化
+
+busyboxがrootfsにインストールする/etc/inetd.confの該当箇所をコメントアウト方向で検討.
+
+該当ファイルをどのレシピが生成しているのかを調べるのに  
+build/tmp/work/以下のログを追いかけていって  
+/build/tmp/work/cortexa9t2hf-neon-xilinx-linux-gnueabi/busybox/1.29.2-r0/temp/log.do_unpack  
+に行き着いた.
+
+対象レシピは project_spec/meta-plnx-generated/recipes-core/busybox のようなので  
+一旦 project_spec/meta-user/recipies-core 以下にコピーする.
+
+files/ineted.confの下2行 telenet... をコメントアウト
+
+*) meta-plnx-generated 以下のレシピなので petalinux-config -c busybox とかで行ける？
+
 ## SDKの作成
 
 プロジェクトルートディレクトリで以下のコマンドを実行
