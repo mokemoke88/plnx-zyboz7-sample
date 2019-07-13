@@ -34,3 +34,5 @@
 #define CONFIG_SYS_I2C_MUX_ADDR                0x74
 #define CONFIG_SYS_I2C_MUX_EEPROM_SEL          0x4
 #endif
+
+#define CONFIG_ZYNQ_GEM_SPI_MAC_OFFSET 0x20

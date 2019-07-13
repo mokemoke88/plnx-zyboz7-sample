@@ -8,9 +8,9 @@ ZyboZ7-20で使用するPetaLinux環境の構築 試行記録
 - [X] USB(ホストモード) を利用可能にする
 - [X] Ethernetを利用可能にする 
 - [ ] udmabuf のカスタムモジュールレシピ 追加
-- [ ] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
-- [ ] SDKの作成
-- [ ] telnetd, ftpd の無効化
+- [x] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
+- [X] SDKの作成
+- [X] telnetd, ftpd の無効化
 
 ## 新規プロジェクト作成からビルドまでの流れ
 
@@ -130,6 +130,147 @@ build/tmp/work/以下のログを追いかけていって
 files/ineted.confの下2行 telenet... をコメントアウト
 
 *) meta-plnx-generated 以下のレシピなので petalinux-config -c busybox とかで行ける？
+
+## uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
+
+ユーザ用のu-bootレシピは project-spec/meta-user/recipes-bsp/u-boot に用意されているので
+これに追加する方向で実施する.
+
+ubootの展開されたソースファイルへアクセスするために  
+project-spec/meta-user/conf/petalinuxbsp.conf に以下を追記
+
+```
+RM_WORK_EXCLUDE += "u-boot-xlnx"
+```
+
+ソースを展開するためにpetalinux-build -c u-boot を実行  
+ソースの展開先は  
+build/tmp/work/plnx_zynq7-xilinx-linux-gnueabi/u-boot-xlnx/v2019.01-xilinx-v2019.1+gitAUTOINC+d895ac5e94-r0/git
+
+展開した先の board/xilinx/common/board.c に spi関係のインクルードファイルと  
+SPIフラッシュからMACアドレスを読み込む処理を追加
+
+```
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * (C) Copyright 2014 - 2019 Xilinx, Inc.
+ * Michal Simek <michal.simek@xilinx.com>
+ */
+
+#include <common.h>
+#include <dm/uclass.h>
+#include <i2c.h>
+#include <spi.h>
+#include <spi_flash.h>
+
+int zynq_board_read_rom_ethaddr(unsigned char *ethaddr)
+{
+	int ret = -EINVAL;
+
+#if defined(CONFIG_ZYNQ_GEM_I2C_MAC_OFFSET)
+	struct udevice *dev;
+	ofnode eeprom;
+
+	eeprom = ofnode_get_chosen_node("xlnx,eeprom");
+	if (!ofnode_valid(eeprom))
+		return -ENODEV;
+
+	debug("%s: Path to EEPROM %s\n", __func__,
+	      ofnode_get_chosen_prop("xlnx,eeprom"));
+
+	ret = uclass_get_device_by_ofnode(UCLASS_I2C_EEPROM, eeprom, &dev);
+	if (ret)
+		return ret;
+
+	ret = dm_i2c_read(dev, CONFIG_ZYNQ_GEM_I2C_MAC_OFFSET, ethaddr, 6);
+	if (ret)
+		debug("%s: I2C EEPROM MAC address read failed\n", __func__);
+	else
+		debug("%s: I2C EEPROM MAC %pM\n", __func__, ethaddr);
+#endif
+
+#if defined(CONFIG_ZYNQ_QSPI) && \
+  defined(CONFIG_ZYNQ_GEM_SPI_MAC_OFFSET)
+
+#define CMD_OTPREAD_ARRAY_FAST 0x4b
+  struct spi_flash *flash;
+	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS,
+	  CONFIG_SF_DEFAULT_CS,
+		CONFIG_SF_DEFAULT_SPEED,
+		CONFIG_SF_DEFAULT_MODE
+	);
+	if(!flash) {
+		debug("%s: SPI(bus:%u cs:%u) probe failed.\n", __func__,
+			CONFIG_SF_DEFAULT_BUS,
+			CONFIG_SF_DEFAULT_CS
+		);
+		return -ENODEV;
+	}
+	flash->read_cmd = CMD_OTPREAD_ARRAY_FAST;
+	ret = spi_flash_read(flash, CONFIG_ZYNQ_GEM_SPI_MAC_OFFSET, 6, ethaddr);
+	if(ret)
+		debug("%s: SPI EEPROM MAC address read failed\n", __func__);
+	else
+		debug("%s: SPI EEPROM MAC %pM\n", __func__, ethaddr);
+	if(flash)
+		spi_flash_free(flash);
+#endif
+	return ret;
+}
+```
+
+追加したdefineを有効にするため  
+展開した先の scripts/config_whitelist.txt に追記
+
+```
+CONFIG_ZYNQ_GEM_SPI_MAC_OFFSET
+```
+
+以上をパッチファイルにする.
+
+```
+> git diff > <プロジェクトディレクトリ>/project-spec/meta-user/recipes-bsp/u-boot/files/zyboz7-spi-mac.patch
+```
+
+u-bootのユーザ用レシピを編集  
+project-spec/meta-user/recipes-bsp/u-boot/u-boot-xlnx_%.bbappend
+
+```
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://platform-top.h file://zyboz7-spi-mac.patch"
+```
+
+追加したdefine定数を有効にするためのpetalinuxレシピを編集  
+project-spec/meta-user/recipes-bsp/u-boot/files/platform-top.h
+
+```
+#define CONFIG_ZYNQ_GEM_SPI_MAC_OFFSET 0x20
+```
+
+ビルドが通るか試す
+
+```
+> petalinux-build -c u-boot
+```
+
+petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちらが優先されるので設定を変更する.
+
+```
+> petalinux-config
+```
+
+設定項目は
+
+[Subsystem AUTO Hardware Settings] => [Ethernet Settings] => [Ethernet MAC address]
+
+で、何か記述されている場合は空にしておく.
+
+
+### 参考URI
+- ZYBO用U-Boot で MAC アドレスを SPI ROM から読む(Qiita) https://qiita.com/ikwzm/items/1b79a528634fd2c09e1f
+
+
 
 ## SDKの作成
 
