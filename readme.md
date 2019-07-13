@@ -278,6 +278,8 @@ petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちら�
 >petalinux-create -t modules --name udmabuf --enable
 ```
 
+TODO...
+
 ## SDKの作成
 
 プロジェクトルートディレクトリで以下のコマンドを実行
@@ -305,13 +307,10 @@ petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちら�
 
 ## 備忘
 
+## 課題
+
 ### petalinux-config -c u-boot の表示が崩れる
 
-build/conf/local.conf に以下を追記
-
-```
-OE_TERMINAL = "screen"
-```
 
 ## 作成したスクリプト
 
