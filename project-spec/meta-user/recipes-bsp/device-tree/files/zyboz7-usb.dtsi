@@ -1,0 +1,14 @@
+// for ZyboZ7 USB Host
+
+/ {
+  usb_phy0: usb_phy@0 {
+    compatible = "usb-nop-xceiv";
+    #phy-cells = <0>;
+  };
+};
+
+&usb0 {
+    status = "okay";
+    dr_mode = "host";
+    usb-phy = <&usb_phy0>;
+};
