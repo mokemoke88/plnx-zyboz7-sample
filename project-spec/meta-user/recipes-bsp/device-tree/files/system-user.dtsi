@@ -2,6 +2,7 @@
 / {
 };
 
+// for ZyboZ7 USB Host
 /{
   usb_phy0: usb_phy@0 {
     compatible = "ulpi-phy";
@@ -21,4 +22,27 @@
     interrupts = <0x0 0x15 0x4>;
     reg = <0xe0002000 0x1000>;
     usb-phy = <&usb_phy0>;
+};
+
+// for udmabuf.
+/{
+  reserved-memory {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    ranges;
+    image_buf0: image_buf@0 {
+      compatible = "shared-dma-pool";
+      reusable;
+      reg = <0x3C000000 0x04000000>; // 64MiB
+      label = "image_buf0";
+    };
+  };
+
+	udmabuf@0 {
+		compatible = "ikwzm,udmabuf-0.10.a";
+		device-name = "udmabuf0";
+		size = <0x04000000>; // 64MiB
+    dma-coherent;
+		memory-region = <&image_buf0>;
+	};  
 };
