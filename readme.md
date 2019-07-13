@@ -11,6 +11,7 @@ ZyboZ7-20で使用するPetaLinux環境の構築 試行記録
 - [x] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
 - [X] SDKの作成
 - [X] telnetd, ftpd の無効化
+- [ ] dropbear(ssh server)の起動時オプション変更
 
 ## 新規プロジェクト作成からビルドまでの流れ
 
@@ -104,9 +105,53 @@ project-spec/meta-user/recipes-bsp/device-tree/files/system-user.dtsi に以下�
 };
 ```
 
+(2019.07.14 追記)
+
+usb周りの記述を zyboz7-usb.dtsi に移し, system-user.dtsi はそれを取り込むように変更した.  
+USB周りもpetalinuxが提供している値と重複している箇所は削除した.
+
+files/system-user.dtsi
+```
+/include/ "system-conf.dtsi"
+/include/ "zyboz7-usb.dtsi"
+
+/ {
+};
+
+```
+
+files/zyboz7-usb.dtsi
+```
+/ {
+  usb_phy0: usb_phy@0 {
+    compatible = "usb-nop-xceiv";
+    #phy-cells = <0>;
+  };
+};
+
+&usb0 {
+    status = "okay";
+    dr_mode = "host";
+    usb-phy = <&usb_phy0>;
+};
+```
+
+device-tree.bbapend を,追加したファイルを取り込むように変更
+
+device-tree.bbapend
+```
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+
+SRC_URI += "\
+  file://system-user.dtsi \
+  file://zyboz7-usb.dtsi \
+"
+```
+
 ### 参考URI
 
 - Ubuntu+ZynqでUSB-HOSTが機能しないときの解決方法(Qiita): https://qiita.com/lp6m/items/45d90e9d2443c2198e96
+- Petalinux 2015.2.1 usb not working (Xilinx フォーラム): https://forums.xilinx.com/t5/Embedded-Linux/Petalinux-2015-2-1-usb-not-working/td-p/654349
 
 ## Ethernetを利用可能にする
 
@@ -272,11 +317,13 @@ petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちら�
 
 ## udmabuf のカスタムモジュールレシピ 追加
 
-とりあえずひな形づくり
+meta-users/recipes-modules/udmabuf を作成
 
 ```
 >petalinux-create -t modules --name udmabuf --enable
 ```
+
+Linux起動時にメモリを確保するためにデバイスツリーに登録
 
 TODO...
 
