@@ -270,7 +270,13 @@ petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちら�
 ### 参考URI
 - ZYBO用U-Boot で MAC アドレスを SPI ROM から読む(Qiita) https://qiita.com/ikwzm/items/1b79a528634fd2c09e1f
 
+## udmabuf のカスタムモジュールレシピ 追加
 
+とりあえずひな形づくり
+
+```
+>petalinux-create -t modules --name udmabuf --enable
+```
 
 ## SDKの作成
 
@@ -296,6 +302,16 @@ petalinuxのu-boot設定でMAC ADDRESSが指定されている場合, そちら�
 
 でクロスコンパイル環境が設定される.  
 (CC とか CXX とか LD とか CROSSCOMPILEとかの環境変数)
+
+## 備忘
+
+### petalinux-config -c u-boot の表示が崩れる
+
+build/conf/local.conf に以下を追記
+
+```
+OE_TERMINAL = "screen"
+```
 
 ## 作成したスクリプト
 
