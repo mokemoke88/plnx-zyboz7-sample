@@ -10,8 +10,10 @@ ZyboZ7-20で使用するPetaLinux環境の構築 試行記録
 - [ ] udmabuf のカスタムモジュールレシピ 追加
 - [x] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
 - [X] SDKの作成
+- [x] C++ でビルドしたバイナリが動作しない
 - [X] telnetd, ftpd の無効化
-- [ ] dropbear(ssh server)の起動時オプション変更
+- [x] dropbear(ssh server)の起動時オプション変更
+- [ ] ユーザの追加
 
 ## 新規プロジェクト作成からビルドまでの流れ
 
@@ -327,6 +329,37 @@ Linux起動時にメモリを確保するためにデバイスツリーに登録
 
 TODO...
 
+## dropbear(ssh server)の起動時オプション変更
+
+デフォルトでは ssh 経由でのrootログインは禁止されているのでログインできるように変更する.
+
+*) PAM周りの設定がおかしいのか,パスワード入力を試行することでPAMが有効になってログインできてしまうようだが.
+
+*) 別ユーザを追加してキー認証以外のログインを禁止するべきと思う.
+
+起動オプションの制御は/etc/default/dropbear 内の記述で行っているようなのでこれを変更する.
+
+petalinux上ではdropbaerレシピがdropbear.defaultという名前でファイルを提供しているので, これを所望の内容に置き換える.
+
+meta-user/recipes-core に dropbear ディレクトリを作成し, dropbear_2018.%.bbappend を以下の内容で作成する.
+ファイルの置き換えのみなので簡単な内容.
+
+```
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+```
+
+dropbearの元レシピからdropbear.defaultを持ってきて内容を変更し
+meta-user/recipes-core/dropbear/files 以下に配置する.
+(元レシピの位置は <petalinuxインストール先>/components/yocto/source/arm/layers/core/meta/recipes-core/dropbear )
+
+petalinuxがyocto由来のレシピに対する変更を警告してくるので
+dropbearを警告対象から除外するために
+meta-user/conf/petalinuxbsp.conf に以下を追記
+
+```
+SIGGEN_UNLOCKED_RECIPES += "dropbear"
+```
+
 ## SDKの作成
 
 プロジェクトルートディレクトリで以下のコマンドを実行
@@ -352,12 +385,23 @@ TODO...
 でクロスコンパイル環境が設定される.  
 (CC とか CXX とか LD とか CROSSCOMPILEとかの環境変数)
 
+## C++ でビルドしたバイナリが動作しない
+
+デフォルトの状態だとrootfsにlibstdc++が入っていないため、パッケージを導入する.
+
+```
+> petalinux-config -c rootfs
+```
+
+[Filesystem Packages] => [misc] => [gcc-runtime] => libstdc++ にチェック
+
+
 ## 備忘
 
 ## 課題
 
-### petalinux-config -c u-boot の表示が崩れる
-
+- petalinux-config -c u-boot の表示が崩れる
+- 起動時に/dev/misc/rtc に対するメッセージが煩いので止める
 
 ## 作成したスクリプト
 
