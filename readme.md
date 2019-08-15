@@ -8,11 +8,11 @@ ZyboZ7-20で使用するPetaLinux環境の構築 試行記録
 - [X] USB(ホストモード) を利用可能にする
 - [X] Ethernetを利用可能にする 
 - [ ] udmabuf のカスタムモジュールレシピ 追加
-- [x] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
+- [X] uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
 - [X] SDKの作成
-- [x] C++ でビルドしたバイナリが動作しない
+- [X] C++ でビルドしたバイナリが動作しない
 - [X] telnetd, ftpd の無効化
-- [x] dropbear(ssh server)の起動時オプション変更
+- [X] dropbear(ssh server)の起動時オプション変更
 - [ ] ユーザの追加
 
 ## 新規プロジェクト作成からビルドまでの流れ
@@ -177,6 +177,17 @@ build/tmp/work/以下のログを追いかけていって
 files/ineted.confの下2行 telenet... をコメントアウト
 
 *) meta-plnx-generated 以下のレシピなので petalinux-config -c busybox とかで行ける？
+
+2019.07.14 追記
+
+petalinux-config -c busybox でinetd自体を止めるのがシンプルそう.
+
+```
+> petalinux-config -c busybox
+```
+
+で変更, 結果は meta-user/recipes-core/busybox 以下に保存される.
+
 
 ## uboot にZyboZ7-20用のMACアドレス読み込みパッチ 追加
 
